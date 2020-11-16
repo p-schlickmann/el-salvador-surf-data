@@ -56,8 +56,10 @@ class Scraper:
 
     @staticmethod
     def reset_db():
-        with DatabaseConnection('./data.db') as cursor:
-            cursor.execute("DROP TABLE IF EXISTS results")
+        reset_db = input("Are you sure you want to reset DB? [y/N]: ")
+        if reset_db == 'y':
+            with DatabaseConnection('./data.db') as cursor:
+                cursor.execute("DROP TABLE IF EXISTS results")
 
     def extract_data(self):
         bot = self.driver
@@ -82,7 +84,7 @@ class Scraper:
 
             for j in range(1, 9):  # 8 charts in 1 day
                 retries = 0
-                while True:  # keep trying
+                while True:  # try 5 times
                     if retries > 4:
                         self._save_results(f"Erro", 0, 0, 0)
                         break
