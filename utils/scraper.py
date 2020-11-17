@@ -19,9 +19,10 @@ from utils.secrets import EMAIL, PASSWORD
 class Scraper:
     """This class is responsible for scraping data"""
 
-    def __init__(self,):
+    def __init__(self, target):
         self.database_path = ''
         self.driver = webdriver.Chrome('../chromedriver.exe')
+        self.target = target
         self.email = EMAIL
         self.password = PASSWORD
 
@@ -61,10 +62,17 @@ class Scraper:
             with DatabaseConnection('./data.db') as cursor:
                 cursor.execute("DROP TABLE IF EXISTS results")
 
+    def exit_ad(self):
+        """If we get redirected out of main page to be advertised"""
+        bot = self.driver
+        if bot.current_url() != self.target:
+            bot.execute_script("window.history.go(-1)")
+
     def extract_data(self):
         bot = self.driver
+        self.exit_ad()
 
-        while True:
+        for _ in range(5):  # try 5 times
             try:
                 page = WebDriverWait(bot, 10).until(
                      EC.element_to_be_clickable((By.TAG_NAME, 'body')))
@@ -125,7 +133,7 @@ class Scraper:
 
     def _select_day(self, day):
         bot = self.driver
-        while True:
+        for _ in range(5):  # try 5 times
             try:
                 bot.find_element_by_css_selector(
                     '#ui-datepicker-div > table > tbody').find_element_by_xpath(
@@ -145,20 +153,20 @@ class Scraper:
             yield start_date + timedelta(day)
 
     def scrape(self):
-        """Logins and scrapes the surf data on the given date range, if exception occurs try again"""
+        """Logins and scrapes the surf data on the given date range"""
 
         bot = self.driver
         try:
-            bot.get("https://www.surfguru.com.br/previsao/el-salvador/la-libertad/la-libertad")
+            bot.get(self.target)
             self._login()
 
             current_year = None
             current_month = None
-            start_date = date(2015, 3, 23)
-            end_date = date(2020, 11, 30)
+            start_date = date(2019, 12, 7)
+            end_date = date(2020, 12, 1)
 
             for day in self.date_range(start_date, end_date):
-
+                self.exit_ad()
                 self._open_date_picker()
 
                 # check if year has changed
@@ -184,5 +192,5 @@ class Scraper:
             pass
 
 
-scraper = Scraper()
+scraper = Scraper("https://www.surfguru.com.br/previsao/el-salvador/la-libertad/la-libertad")
 scraper.scrape()

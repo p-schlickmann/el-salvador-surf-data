@@ -1,4 +1,5 @@
 from utils.conn import DatabaseConnection
 
 with DatabaseConnection('./data.db') as cursor:
-    cursor.execute('DELETE FROM results WHERE date="31-3-2015"')
+    test = cursor.execute('SELECT * FROM results WHERE date="6-12-2019"')
+    print(test.fetchall())
