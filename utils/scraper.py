@@ -1,4 +1,5 @@
 """file responsible for scraping data from surfguru.com.br"""
+
 import re
 from time import sleep
 from datetime import timedelta, date
@@ -56,40 +57,30 @@ class Scraper:
 
     @staticmethod
     def reset_db():
+        """Resets the database, but check if the user is sure first"""
+
         reset_db = input("Are you sure you want to reset DB? [y/N]: ")
         if reset_db == 'y':
             with DatabaseConnection('./data.db') as cursor:
                 cursor.execute("DROP TABLE IF EXISTS results")
 
     def exit_ad(self):
-        """If we get redirected out of main page to be advertised"""
+        """If we get redirected out of main page"""
+
         bot = self.driver
         if bot.current_url() != self.target:
             bot.execute_script("window.history.go(-1)")
 
     def extract_data(self):
+        """Responsible for extracting the data and passing to save_results function"""
+
         bot = self.driver
         self.exit_ad()
 
-        for _ in range(5):  # try 5 times
-            try:
-                page = WebDriverWait(bot, 10).until(
-                     EC.element_to_be_clickable((By.TAG_NAME, 'body')))
-                page.send_keys(Keys.PAGE_DOWN)
-                *_, year = WebDriverWait(bot, 10).until(
-                    EC.presence_of_element_located((By.ID, 'datepicker'))).get_attribute(
-                        "value").split(" - ")
-                break
-            except:
-                continue
+        year = self.get_current_year()
 
-        for i in range(1, 6):  # 5 days
-            if i == 5:
-                # scroll wave size chart little bit horizontally so we can hover over the last day
-                bot.execute_script(
-                    'document.querySelector("#scroll_ondas .dragger").style.left = "3px";')
-
-            for j in range(1, 9):  # 8 charts in 1 day
+        for _ in range(1, 6):  # 5 days
+            for _ in range(1, 9):  # 8 charts in 1 day
                 retries = 0
                 while True:  # try 5 times
                     if retries > 4:
@@ -114,6 +105,24 @@ class Scraper:
                     else:
                         self._save_results(f"{day}-{month}-{year}", time, wave_size, wave_period)
                         break
+
+    def get_current_year(self):
+        """Returns current year and scrolls the page so we can simulate mouse hover"""
+
+        bot = self.driver
+
+        for _ in range(5):  # try 5 times
+            try:
+                page = WebDriverWait(bot, 10).until(
+                     EC.element_to_be_clickable((By.TAG_NAME, 'body')))
+                page.send_keys(Keys.PAGE_DOWN)
+                *_, year = WebDriverWait(bot, 10).until(
+                    EC.presence_of_element_located((By.ID, 'datepicker'))).get_attribute(
+                        "value").split(" - ")
+            except:
+                continue
+            else:
+                return year
 
     def _open_date_picker(self):
         WebDriverWait(self.driver, 20).until(
