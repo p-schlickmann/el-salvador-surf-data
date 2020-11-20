@@ -1,4 +1,4 @@
-"""file responsible for scraping data from surfguru.com.br"""
+"""file responsible for scraping data"""
 
 import re
 from time import sleep
@@ -17,12 +17,10 @@ from utils.secrets import EMAIL, PASSWORD
 
 
 class Scraper:
-    """This class is responsible for scraping data"""
-
     def __init__(self, target):
         self.database_path = ''
         self.driver = webdriver.Chrome('../chromedriver.exe')
-        self.target = target
+        self.target_url = target
         self.email = EMAIL
         self.password = PASSWORD
 
@@ -64,23 +62,24 @@ class Scraper:
             with DatabaseConnection('./data.db') as cursor:
                 cursor.execute("DROP TABLE IF EXISTS results")
 
-    def exit_ad(self):
+    def set_correct_url(self):
         """If we get redirected out of main page"""
 
         bot = self.driver
-        if bot.current_url() != self.target:
+        while bot.current_url() != self.target_url:
             bot.execute_script("window.history.go(-1)")
+            sleep(0.5)
 
     def extract_data(self):
-        """Responsible for extracting the data and passing to save_results function"""
+        """Responsible for extracting the data and passing it to save_results function"""
 
         bot = self.driver
-        self.exit_ad()
+        self.set_correct_url()
 
         year = self.get_current_year()
 
-        for _ in range(1, 6):  # 5 days
-            for _ in range(1, 9):  # 8 charts in 1 day
+        for i in range(1, 6):  # 5 days
+            for j in range(1, 9):  # 8 charts in 1 day
                 retries = 0
                 while True:  # try 5 times
                     if retries > 4:
@@ -116,6 +115,7 @@ class Scraper:
                 page = WebDriverWait(bot, 10).until(
                      EC.element_to_be_clickable((By.TAG_NAME, 'body')))
                 page.send_keys(Keys.PAGE_DOWN)
+
                 *_, year = WebDriverWait(bot, 10).until(
                     EC.presence_of_element_located((By.ID, 'datepicker'))).get_attribute(
                         "value").split(" - ")
@@ -174,7 +174,7 @@ class Scraper:
             end_date = date(2020, 12, 1)
 
             for day in self.date_range(start_date, end_date):
-                self.exit_ad()
+                self.set_correct_url()
                 self._open_date_picker()
 
                 # check if year has changed
